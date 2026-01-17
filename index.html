@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIPP - PP At-Taufiiqiyyah Bustanul Maarif</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #0f5132; /* Hijau NU/Pesantren */
+            --accent-color: #ffc107;  /* Kuning Emas */
+            --bg-light: #f4f6f9;
+        }
+        body { background-color: var(--bg-light); font-family: 'Segoe UI', sans-serif; overflow-x: hidden; }
+        
+        /* Sidebar */
+        .sidebar { 
+            width: 260px; background-color: var(--primary-color); color: white; 
+            min-height: 100vh; position: fixed; transition: all 0.3s; z-index: 1000;
+        }
+        .main-content { margin-left: 260px; padding: 20px; transition: all 0.3s; }
+        
+        .brand-box { padding: 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .brand-logo { width: 70px; height: 70px; background: white; border-radius: 50%; padding: 2px; object-fit: contain; margin-bottom: 10px; }
+        .brand-title { font-size: 0.85rem; font-weight: bold; line-height: 1.2; }
+
+        .nav-link { color: rgba(255,255,255,0.85) !important; padding: 12px 20px; border-radius: 0 25px 25px 0; margin-bottom: 5px; cursor: pointer; }
+        .nav-link:hover, .nav-link.active { background-color: var(--accent-color); color: #000 !important; font-weight: bold; }
+        .nav-link i { width: 25px; text-align: center; margin-right: 10px; }
+
+        /* Login Page */
+        #page-login { position: fixed; top:0; left:0; width:100%; height:100%; background: linear-gradient(135deg, #0f5132, #000); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: white; width: 100%; max-width: 400px; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); text-align: center; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { margin-left: -260px; }
+            .sidebar.active { margin-left: 0; }
+            .main-content { margin-left: 0; }
+        }
+        
+        .card-stat { border: none; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .table-responsive { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+    <div id="page-login">
+        <div class="login-box">
+            <img src="logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2000/2000762.png'" class="brand-logo" alt="Logo">
+            <h5 class="fw-bold mb-1 text-success">PP AT-TAUFIIQIYYAH</h5>
+            <p class="text-muted small mb-4">BUSTANUL MAARIF</p>
+            
+            <form id="formLogin">
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="uName" placeholder="Username" required>
+                    <label>Username</label>
+                </div>
+                <div class="form-floating mb-3">
+                    <input type="password" class="form-control" id="uPass" placeholder="Password" required>
+                    <label>Password</label>
+                </div>
+                <button type="submit" class="btn btn-success w-100 py-2 fw-bold">MASUK APLIKASI</button>
+                <div class="mt-3">
+                    <a href="#" onclick="lupaPass()" class="small text-decoration-none text-muted">Lupa Password?</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="main-app" style="display:none;">
+        
+        <div class="sidebar" id="sidebar">
+            <div class="brand-box">
+                <img src="logo.png" onerror="this.src='https://cdn-icons-png.flaticon.com/512/2000/2000762.png'" class="brand-logo">
+                <div class="brand-title">PP AT-TAUFIIQIYYAH<br>BUSTANUL MAARIF</div>
+            </div>
+            <nav class="nav flex-column mt-3">
+                <a class="nav-link active" onclick="nav('dashboard')"><i class="fas fa-home"></i> Dashboard</a>
+                <a class="nav-link" onclick="nav('santri')"><i class="fas fa-users"></i> Data Santri</a>
+                <a class="nav-link" onclick="nav('pembayaran')"><i class="fas fa-money-bill-wave"></i> Pembayaran</a>
+                <a class="nav-link" onclick="nav('arsip')"><i class="fas fa-box-archive"></i> Arsip / Non-Aktif</a>
+                <a class="nav-link" onclick="nav('laporan')"><i class="fas fa-file-pdf"></i> Laporan</a>
+                <a class="nav-link" onclick="nav('pengaturan')"><i class="fas fa-cog"></i> Pengaturan</a>
+                <a class="nav-link text-danger mt-4" onclick="logout()"><i class="fas fa-sign-out-alt"></i> Keluar</a>
+            </nav>
+        </div>
+
+        <div class="main-content">
+            <button class="btn btn-success d-md-none mb-3" onclick="toggleSidebar()"><i class="fas fa-bars"></i> Menu</button>
+            
+            <div id="view-dashboard" class="view-section">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold">Dashboard Keuangan</h4>
+                    <div class="text-end">
+                        <div id="jam" class="fw-bold fs-4 text-success">00:00</div>
+                        <small id="tanggal" class="text-muted">-</small>
+                    </div>
+                </div>
+
+                <div id="alertTempo" class="alert alert-info d-flex align-items-center mb-4">
+                    <i class="fas fa-info-circle fa-2x me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-0">Status Pembayaran Bulan Ini</h6>
+                        <span id="textTempo">Memuat...</span>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100">
+                            <small class="text-muted fw-bold">SANTRI WAJIB BAYAR</small>
+                            <h3 class="mt-2 mb-0" id="dashJmlSantri">0</h3>
+                            <small class="text-muted">Orang</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100">
+                            <small class="text-muted fw-bold">TARGET BULAN INI</small>
+                            <h4 class="mt-2 mb-0 text-primary" id="dashTarget">Rp 0</h4>
+                            <small class="text-muted">Potensi Pemasukan</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 bg-success text-white">
+                            <small class="fw-bold text-white-50">SUDAH MASUK</small>
+                            <h4 class="mt-2 mb-0" id="dashMasuk">Rp 0</h4>
+                            <small class="text-white-50" id="dashPersen">0%</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card card-stat p-3 h-100 bg-danger text-white">
+                            <small class="fw-bold text-white-50">BELUM MASUK</small>
+                            <h4 class="mt-2 mb-0" id="dashBelum">Rp 0</h4>
+                            <small class="text-white-50">Tunggakan Bulan Ini</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-santri" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3">Data Santri Aktif</h4>
+                
+                <div class="card card-stat mb-3">
+                    <div class="card-body">
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <input type="file" id="fileExcel" class="form-control" accept=".xlsx, .xls">
+                            </div>
+                            <div class="col-md-2">
+                                <button onclick="importExcel()" class="btn btn-success w-100"><i class="fas fa-file-excel me-1"></i> Import</button>
+                            </div>
+                            <div class="col-md-3">
+                                <button onclick="tambahManual()" class="btn btn-primary w-100"><i class="fas fa-plus me-1"></i> Tambah Manual</button>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="text" id="cariSantri" class="form-control" placeholder="Cari nama..." onkeyup="renderSantri()">
+                            </div>
+                        </div>
+                        <small class="text-muted">*Format Excel: Kolom A (Nama), Kolom B (Kelas/Kamar)</small>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Santri</th>
+                                <th>Kelas / Kamar</th>
+                                <th>Status</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelSantri"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-pembayaran" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3">Input Pembayaran Syahriah</h4>
+                
+                <div class="card card-stat mb-4">
+                    <div class="card-body py-2">
+                        <div class="row align-items-center">
+                            <div class="col-md-2 fw-bold">Pilih Periode:</div>
+                            <div class="col-md-3">
+                                <select id="bayarBulan" class="form-select" onchange="renderPembayaran()">
+                                    <option value="0">Januari</option><option value="1">Februari</option><option value="2">Maret</option>
+                                    <option value="3">April</option><option value="4">Mei</option><option value="5">Juni</option>
+                                    <option value="6">Juli</option><option value="7">Agustus</option><option value="8">September</option>
+                                    <option value="9">Oktober</option><option value="10">November</option><option value="11">Desember</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <select id="bayarTahun" class="form-select" onchange="renderPembayaran()"></select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" id="cariBayar" class="form-control" placeholder="Cari santri..." onkeyup="renderPembayaran()">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Santri</th>
+                                <th>Kelas</th>
+                                <th>Status Bayar</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelBayar"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-arsip" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3">Arsip Santri Non-Aktif</h4>
+                <div class="alert alert-warning small">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Daftar santri yang sudah boyong/lulus. Cek apakah masih memiliki tunggakan.
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Nama Santri</th>
+                                <th>Kelas Terakhir</th>
+                                <th>Catatan</th>
+                                <th class="text-end">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelArsip"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="view-laporan" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3">Laporan & Rekap</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card card-stat mb-3">
+                            <div class="card-header bg-white fw-bold">Rekap Bulanan (PDF)</div>
+                            <div class="card-body">
+                                <div class="row g-2 mb-3">
+                                    <div class="col-6">
+                                        <select id="lapBulan" class="form-select"></select>
+                                    </div>
+                                    <div class="col-6">
+                                        <select id="lapTahun" class="form-select"></select>
+                                    </div>
+                                </div>
+                                <button onclick="downloadLaporanBulanan()" class="btn btn-primary w-100"><i class="fas fa-download me-2"></i>Download Laporan</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-pengaturan" class="view-section" style="display:none;">
+                <h4 class="fw-bold mb-3">Pengaturan</h4>
+                <div class="row">
+                    <div class="col-md-7">
+                        <div class="card card-stat mb-4">
+                            <div class="card-header bg-white fw-bold">Konfigurasi Keuangan</div>
+                            <div class="card-body">
+                                <form onsubmit="saveConfig(event)">
+                                    <div class="mb-3">
+                                        <label>Nominal Syahriah (Rp)</label>
+                                        <input type="number" id="confNominal" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label>Tanggal Jatuh Tempo</label>
+                                        <input type="number" id="confTempo" class="form-control" min="1" max="31" required>
+                                    </div>
+                                    <button class="btn btn-success btn-sm">Simpan</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="card card-stat mb-4">
+                            <div class="card-header bg-white fw-bold">Ganti Password</div>
+                            <div class="card-body">
+                                <form onsubmit="saveAkun(event)">
+                                    <div class="mb-3">
+                                        <label>Username</label>
+                                        <input type="text" id="confUser" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label>Password Baru</label>
+                                        <input type="text" id="confPass" class="form-control" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label>Recovery Key (Untuk Lupa Password)</label>
+                                        <input type="text" id="confKey" class="form-control text-danger fw-bold" required>
+                                    </div>
+                                    <button class="btn btn-warning btn-sm">Update Akun</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-5">
+                        <div class="card card-stat bg-light">
+                            <div class="card-body text-center">
+                                <h5>Backup Data</h5>
+                                <p class="small text-muted">Download data .json untuk cadangan.</p>
+                                <button onclick="downloadBackup()" class="btn btn-outline-primary w-100 mb-3"><i class="fas fa-download"></i> Download</button>
+                                <hr>
+                                <h5>Restore Data</h5>
+                                <input type="file" id="fileRestore" class="form-control mb-2" accept=".json">
+                                <button onclick="restoreBackup()" class="btn btn-outline-danger w-100">Restore</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div> </div> <script>
+        // ======================= CONFIG & DB =======================
+        const DB_KEY = 'SIPP_PONDOK_DATA';
+        const defaultDB = {
+            config: { nominal: 100000, tempo: 10, user: 'admin', pass: '123', key: 'PONDOK123' },
+            santri: [],     // { id, nama, kelas, status: 'aktif'/'nonaktif', catatan: '' }
+            transaksi: []   // { id, idSantri, nama, bulan, tahun, tanggalBayar, nominal, petugas, via }
+        };
+
+        function getDB() {
+            const data = localStorage.getItem(DB_KEY);
+            return data ? JSON.parse(data) : defaultDB;
+        }
+        function saveDB(data) {
+            localStorage.setItem(DB_KEY, JSON.stringify(data));
+        }
+        function formatRupiah(n) {
+            return new Intl.NumberFormat('id-ID', {style:'currency', currency:'IDR', minimumFractionDigits:0}).format(n);
+        }
+
+        // ======================= AUTH & NAVIGATION =======================
+        // Cek Login
+        if(sessionStorage.getItem('isLogin')) {
+            showApp();
+        }
+
+        document.getElementById('formLogin').addEventListener('submit', e => {
+            e.preventDefault();
+            const db = getDB();
+            const u = document.getElementById('uName').value;
+            const p = document.getElementById('uPass').value;
+            if(u === db.config.user && p === db.config.pass) {
+                sessionStorage.setItem('isLogin', 'true');
+                showApp();
+            } else {
+                Swal.fire('Error', 'Username/Password Salah', 'error');
+            }
+        });
+
+        function showApp() {
+            document.getElementById('page-login').style.display = 'none';
+            document.getElementById('main-app').style.display = 'block';
+            initApp();
+        }
+
+        function logout() {
+            Swal.fire({
+                title: 'Keluar?', icon: 'question', showCancelButton: true
+            }).then(r => {
+                if(r.isConfirmed) {
+                    sessionStorage.clear();
+                    location.reload();
+                }
+            });
+        }
+
+        function lupaPass() {
+            Swal.fire({
+                title: 'Reset Password', input: 'text', inputLabel: 'Masukkan Recovery Key', showCancelButton: true
+            }).then(r => {
+                if(r.value) {
+                    const db = getDB();
+                    if(r.value === db.config.key) {
+                        db.config.pass = '123';
+                        saveDB(db);
+                        Swal.fire('Sukses', 'Password direset jadi: 123', 'success');
+                    } else {
+                        Swal.fire('Gagal', 'Key Salah', 'error');
+                    }
+                }
+            });
+        }
+
+        function nav(page) {
+            document.querySelectorAll('.view-section').forEach(el => el.style.display = 'none');
+            document.getElementById('view-' + page).style.display = 'block';
+            document.querySelectorAll('.nav-link').forEach(el => el.classList.remove('active'));
+            event.target.closest('.nav-link').classList.add('active'); // highlight menu
+
+            if(page === 'dashboard') initDashboard();
+            if(page === 'santri') renderSantri();
+            if(page === 'pembayaran') renderPembayaran();
+            if(page === 'arsip') renderArsip();
+            if(page === 'pengaturan') loadConfig();
+            if(page === 'laporan') initLaporan();
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('active');
+        }
+
+        // ======================= DASHBOARD =======================
+        function initApp() {
+            // Isi dropdown tahun secara dinamis
+            const yearSelect = document.getElementById('bayarTahun');
+            const lapYear = document.getElementById('lapTahun');
+            const currYear = new Date().getFullYear();
+            for(let y = currYear - 2; y <= currYear + 2; y++) {
+                const opt = `<option value="${y}" ${y===currYear?'selected':''}>${y}</option>`;
+                yearSelect.innerHTML += opt;
+                lapYear.innerHTML += opt;
+            }
+            // Isi dropdown bulan laporan
+            const bln = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+            const lapBln = document.getElementById('lapBulan');
+            bln.forEach((b, i) => lapBln.innerHTML += `<option value="${i}" ${i===new Date().getMonth()?'selected':''}>${b}</option>`);
+            
+            setInterval(() => {
+                const now = new Date();
+                document.getElementById('jam').innerText = now.toLocaleTimeString('id-ID');
+                document.getElementById('tanggal').innerText = now.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+            }, 1000);
+
+            initDashboard();
+        }
+
+        function initDashboard() {
+            const db = getDB();
+            const now = new Date();
+            const bln = now.getMonth();
+            const thn = now.getFullYear();
+
+            // Hitung Santri Aktif
+            const aktif = db.santri.filter(s => s.status === 'aktif');
+            const target = aktif.length * db.config.nominal;
+
+            // Hitung Uang Masuk Bulan Ini
+            let masuk = 0;
+            db.transaksi.forEach(t => {
+                if(parseInt(t.bulan) === bln && parseInt(t.tahun) === thn) {
+                    masuk += parseInt(t.nominal);
+                }
+            });
+
+            document.getElementById('dashJmlSantri').innerText = aktif.length;
+            document.getElementById('dashTarget').innerText = formatRupiah(target);
+            document.getElementById('dashMasuk').innerText = formatRupiah(masuk);
+            document.getElementById('dashBelum').innerText = formatRupiah(target - masuk);
+            
+            const persen = target === 0 ? 0 : Math.round((masuk/target)*100);
+            document.getElementById('dashPersen').innerText = persen + "%";
+
+            // Logic Alert Jatuh Tempo
+            const tgl = now.getDate();
+            const tempo = db.config.tempo;
+            const alertBox = document.getElementById('alertTempo');
+            const textBox = document.getElementById('textTempo');
+            
+            if(tgl > tempo) {
+                alertBox.className = 'alert alert-danger d-flex align-items-center mb-4';
+                textBox.innerHTML = `Sudah lewat tanggal jatuh tempo (${tempo}).<br>Segera tagih tunggakan!`;
+            } else {
+                alertBox.className = 'alert alert-info d-flex align-items-center mb-4';
+                textBox.innerHTML = `Masa pembayaran sedang berlangsung.<br>Batas akhir tanggal ${tempo}.`;
+            }
+        }
+
+        // ======================= DATA SANTRI =======================
+        function renderSantri() {
+            const db = getDB();
+            const key = document.getElementById('cariSantri').value.toLowerCase();
+            const tbody = document.getElementById('tabelSantri');
+            tbody.innerHTML = '';
+
+            const list = db.santri.filter(s => s.status === 'aktif' && s.nama.toLowerCase().includes(key));
+            
+            list.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="fw-bold">${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td><span class="badge bg-success">Aktif</span></td>
+                        <td class="text-end">
+                            <button class="btn btn-sm btn-warning" onclick="editSantri(${s.id})"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="nonAktif(${s.id})"><i class="fas fa-user-times"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function tambahManual() {
+            Swal.fire({
+                title: 'Tambah Santri',
+                html: '<input id="swal-nama" class="swal2-input" placeholder="Nama Lengkap">' +
+                      '<input id="swal-kelas" class="swal2-input" placeholder="Kelas/Kamar">',
+                showCancelButton: true,
+                preConfirm: () => {
+                    return { nama: document.getElementById('swal-nama').value, kelas: document.getElementById('swal-kelas').value }
+                }
+            }).then(r => {
+                if(r.isConfirmed && r.value.nama) {
+                    const db = getDB();
+                    db.santri.push({ id: Date.now(), nama: r.value.nama, kelas: r.value.kelas, status: 'aktif' });
+                    saveDB(db);
+                    renderSantri();
+                    Swal.fire('Berhasil', '', 'success');
+                }
+            });
+        }
+
+        function editSantri(id) {
+            const db = getDB();
+            const s = db.santri.find(x => x.id === id);
+            Swal.fire({
+                title: 'Edit Santri',
+                html: `<input id="swal-nama" class="swal2-input" value="${s.nama}">` +
+                      `<input id="swal-kelas" class="swal2-input" value="${s.kelas}">`,
+                showCancelButton: true
+            }).then(r => {
+                if(r.isConfirmed) {
+                    s.nama = document.getElementById('swal-nama').value;
+                    s.kelas = document.getElementById('swal-kelas').value;
+                    saveDB(db);
+                    renderSantri();
+                }
+            });
+        }
+
+        function nonAktif(id) {
+            Swal.fire({
+                title: 'Non-Aktifkan Santri?',
+                text: "Santri akan dipindah ke Arsip. Masukkan catatan (misal: Lulus / Boyong)",
+                input: 'text',
+                showCancelButton: true,
+                confirmButtonText: 'Ya, Pindahkan',
+                confirmButtonColor: '#d33'
+            }).then(r => {
+                if(r.isConfirmed) {
+                    const db = getDB();
+                    const s = db.santri.find(x => x.id === id);
+                    s.status = 'nonaktif';
+                    s.catatan = r.value || 'Tanpa Keterangan';
+                    saveDB(db);
+                    renderSantri();
+                    Swal.fire('Dipindahkan', 'Santri masuk ke menu Arsip', 'success');
+                }
+            });
+        }
+
+        function importExcel() {
+            const file = document.getElementById('fileExcel').files[0];
+            if(!file) return Swal.fire('Error','Pilih file dulu','warning');
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const json = XLSX.utils.sheet_to_json(sheet, {header:1}); // Array of Arrays
+                
+                const db = getDB();
+                let count = 0;
+                // Mulai baris ke-1 (asumsi baris 0 adalah header)
+                for(let i=1; i<json.length; i++) {
+                    const row = json[i];
+                    if(row[0]) { // Kalau kolom Nama ada isinya
+                        db.santri.push({
+                            id: Date.now() + i,
+                            nama: row[0],
+                            kelas: row[1] || '-',
+                            status: 'aktif'
+                        });
+                        count++;
+                    }
+                }
+                saveDB(db);
+                renderSantri();
+                Swal.fire('Sukses', `${count} Data Santri Berhasil Diimpor`, 'success');
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // ======================= PEMBAYARAN =======================
+        function renderPembayaran() {
+            const db = getDB();
+            const bln = parseInt(document.getElementById('bayarBulan').value);
+            const thn = parseInt(document.getElementById('bayarTahun').value);
+            const key = document.getElementById('cariBayar').value.toLowerCase();
+            const tbody = document.getElementById('tabelBayar');
+            tbody.innerHTML = '';
+
+            const list = db.santri.filter(s => s.status === 'aktif' && s.nama.toLowerCase().includes(key));
+            
+            list.forEach(s => {
+                // Cek apakah sudah bayar di bulan & tahun ini
+                const trx = db.transaksi.find(t => t.idSantri === s.id && parseInt(t.bulan) === bln && parseInt(t.tahun) === thn);
+                
+                let statusHtml = '';
+                let aksiHtml = '';
+
+                if(trx) {
+                    // SUDAH BAYAR
+                    statusHtml = `<span class="badge bg-success">LUNAS (${trx.tanggalBayar})</span><br><small class="text-muted">Rp ${formatRupiah(trx.nominal)}</small>`;
+                    aksiHtml = `<button class="btn btn-sm btn-secondary" onclick="hapusBayar(${trx.id})"><i class="fas fa-undo"></i> Batal</button>`;
+                } else {
+                    // BELUM BAYAR
+                    statusHtml = `<span class="badge bg-danger">BELUM BAYAR</span>`;
+                    aksiHtml = `<button class="btn btn-sm btn-primary" onclick="inputBayar(${s.id})"><i class="fas fa-hand-holding-usd"></i> Bayar</button>`;
+                }
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td>${statusHtml}</td>
+                        <td class="text-end">${aksiHtml}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function inputBayar(idSantri) {
+            const db = getDB();
+            const s = db.santri.find(x => x.id === idSantri);
+            const nominalDefault = db.config.nominal;
+            
+            // Tampilkan Popup Form
+            Swal.fire({
+                title: `Bayar Syahriah: ${s.nama}`,
+                html: `
+                    <div class="text-start">
+                        <label class="small">Tanggal Bayar</label>
+                        <input type="date" id="formTgl" class="form-control mb-2" value="${new Date().toISOString().slice(0,10)}">
+                        <label class="small">Nominal</label>
+                        <input type="number" id="formNominal" class="form-control mb-2" value="${nominalDefault}">
+                        <label class="small">Metode</label>
+                        <select id="formVia" class="form-select">
+                            <option value="Tunai">Tunai / Cash</option>
+                            <option value="Transfer">Transfer Bank</option>
+                        </select>
+                    </div>
+                `,
+                showCancelButton: true,
+                confirmButtonText: 'Simpan Pembayaran'
+            }).then(r => {
+                if(r.isConfirmed) {
+                    const bln = document.getElementById('bayarBulan').value;
+                    const thn = document.getElementById('bayarTahun').value;
+                    
+                    const tgl = document.getElementById('formTgl').value;
+                    const nom = document.getElementById('formNominal').value;
+                    const via = document.getElementById('formVia').value;
+
+                    db.transaksi.push({
+                        id: Date.now(),
+                        idSantri: s.id,
+                        nama: s.nama, // Simpan nama biar gampang laporannya
+                        bulan: bln,
+                        tahun: thn,
+                        tanggalBayar: tgl,
+                        nominal: nom,
+                        via: via,
+                        petugas: db.config.user
+                    });
+                    saveDB(db);
+                    renderPembayaran(); // Refresh tabel
+                    Swal.fire('Disimpan', 'Pembayaran berhasil', 'success');
+                }
+            });
+        }
+
+        function hapusBayar(idTrx) {
+            Swal.fire({title: 'Batalkan Pembayaran?', icon: 'warning', showCancelButton: true}).then(r => {
+                if(r.isConfirmed) {
+                    const db = getDB();
+                    db.transaksi = db.transaksi.filter(t => t.id !== idTrx);
+                    saveDB(db);
+                    renderPembayaran();
+                }
+            });
+        }
+
+        // ======================= ARSIP =======================
+        function renderArsip() {
+            const db = getDB();
+            const tbody = document.getElementById('tabelArsip');
+            tbody.innerHTML = '';
+            const list = db.santri.filter(s => s.status === 'nonaktif');
+            
+            list.forEach(s => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="text-muted">${s.nama}</td>
+                        <td>${s.kelas}</td>
+                        <td>${s.catatan || '-'}</td>
+                        <td class="text-end">
+                            <button onclick="restoreSantri(${s.id})" class="btn btn-sm btn-outline-success">Aktifkan Lagi</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+        function restoreSantri(id) {
+            const db = getDB();
+            const s = db.santri.find(x => x.id === id);
+            s.status = 'aktif';
+            saveDB(db);
+            renderArsip();
+            Swal.fire('Sukses', 'Santri kembali aktif', 'success');
+        }
+
+        // ======================= PENGATURAN & BACKUP =======================
+        function loadConfig() {
+            const db = getDB();
+            document.getElementById('confNominal').value = db.config.nominal;
+            document.getElementById('confTempo').value = db.config.tempo;
+            document.getElementById('confUser').value = db.config.user;
+            document.getElementById('confPass').value = db.config.pass;
+            document.getElementById('confKey').value = db.config.key;
+        }
+        function saveConfig(e) {
+            e.preventDefault();
+            const db = getDB();
+            db.config.nominal = parseInt(document.getElementById('confNominal').value);
+            db.config.tempo = parseInt(document.getElementById('confTempo').value);
+            saveDB(db);
+            Swal.fire('Saved', 'Pengaturan Keuangan Disimpan', 'success');
+        }
+        function saveAkun(e) {
+            e.preventDefault();
+            const db = getDB();
+            db.config.user = document.getElementById('confUser').value;
+            db.config.pass = document.getElementById('confPass').value;
+            db.config.key = document.getElementById('confKey').value;
+            saveDB(db);
+            Swal.fire('Saved', 'Akun Update. Silakan Login Ulang', 'success');
+        }
+        
+        function downloadBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem(DB_KEY));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", "BACKUP_PONDOK_" + new Date().toISOString().slice(0,10) + ".json");
+            dlAnchorElem.click();
+        }
+
+        function restoreBackup() {
+            const file = document.getElementById('fileRestore').files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    if(json.config && json.santri) {
+                        saveDB(json);
+                        Swal.fire('Sukses', 'Data dipulihkan', 'success').then(()=>location.reload());
+                    } else Swal.fire('Error','File salah','error');
+                } catch(err) { Swal.fire('Error','File corrupt','error'); }
+            };
+            reader.readAsText(file);
+        }
+
+        // ======================= LAPORAN PDF =======================
+        function initLaporan() {
+            // Dropdowns populated in initApp
+        }
+
+        function downloadLaporanBulanan() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            const db = getDB();
+            const blnIdx = parseInt(document.getElementById('lapBulan').value);
+            const thn = parseInt(document.getElementById('lapTahun').value);
+            const namaBulan = document.getElementById('lapBulan').options[blnIdx].text;
+
+            // Judul
+            doc.setFontSize(16);
+            doc.text("LAPORAN KEUANGAN BULANAN", 105, 15, null, null, "center");
+            doc.setFontSize(12);
+            doc.text("PP AT-TAUFIIQIYYAH BUSTANUL MAARIF", 105, 22, null, null, "center");
+            doc.setFontSize(10);
+            doc.text(`Periode: ${namaBulan} ${thn}`, 105, 28, null, null, "center");
+
+            // Data Table
+            const santriAktif = db.santri.filter(s => s.status === 'aktif');
+            let totalMasuk = 0;
+            let totalTunggakan = 0;
+            
+            const tableData = santriAktif.map((s, index) => {
+                const trx = db.transaksi.find(t => t.idSantri === s.id && parseInt(t.bulan) === blnIdx && parseInt(t.tahun) === thn);
+                
+                let ket = 'BELUM BAYAR';
+                let nominal = 0;
+                
+                if(trx) {
+                    ket = `Lunas (${trx.tanggalBayar})`;
+                    nominal = parseInt(trx.nominal);
+                    totalMasuk += nominal;
+                } else {
+                    totalTunggakan += db.config.nominal;
+                }
+
+                return [index+1, s.nama, s.kelas, formatRupiah(nominal), ket];
+            });
+
+            doc.autoTable({
+                startY: 35,
+                head: [['No', 'Nama Santri', 'Kelas', 'Bayar', 'Keterangan']],
+                body: tableData,
+                theme: 'grid',
+                headStyles: { fillColor: [15, 81, 50] } // Hijau
+            });
+
+            // Summary di bawah tabel
+            const finalY = doc.lastAutoTable.finalY + 10;
+            doc.text(`Total Pemasukan: ${formatRupiah(totalMasuk)}`, 14, finalY);
+            doc.text(`Potensi Tunggakan: ${formatRupiah(totalTunggakan)}`, 14, finalY + 6);
+            doc.text(`Dicetak pada: ${new Date().toLocaleString('id-ID')}`, 14, finalY + 15);
+
+            doc.save(`Laporan_Keuangan_${namaBulan}_${thn}.pdf`);
+        }
+    </script>
+</body>
+</html>
